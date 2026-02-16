@@ -1,0 +1,66 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Package
+    Name="LayoutFixer"
+    Manufacturer="LayoutFixer"
+    Version="1.0.0"
+    UpgradeCode="{9A4F4B8E-9D2E-4B15-9A58-FA3C4D3E9B11}"
+    Compressed="yes"
+    Scope="perUser">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of LayoutFixer is already installed." />
+    <MediaTemplate />
+
+    <Feature Id="MainFeature" Title="LayoutFixer" Level="1">
+      <ComponentGroupRef Id="AppComponents" />
+      <ComponentRef Id="StartMenuShortcuts" />
+    </Feature>
+
+  </Package>
+
+  <!-- Directories (per-user install + Start Menu) -->
+  <Fragment>
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="INSTALLFOLDER" Name="LayoutFixer" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ProgramMenuDir" Name="LayoutFixer" />
+    </StandardDirectory>
+  </Fragment>
+
+  <!-- App files -->
+  <Fragment>
+    <ComponentGroup Id="AppComponents" Directory="INSTALLFOLDER">
+<Component Id="AppExe" Guid="{F2D6E44F-3B6F-4F0C-9B8B-07D7E5E6E5B9}">
+  <File Id="LayoutFixerExe"
+        Source="..\..\src\LayoutFixer\bin\Release\net8.0-windows\win-x64\publish\LayoutFixer.exe" />
+
+  <!-- REQUIRED for per-user installs -->
+  <RegistryValue
+      Root="HKCU"
+      Key="Software\LayoutFixer"
+      Name="Installed"
+      Type="integer"
+      Value="1"
+      KeyPath="yes" />
+      <RemoveFolder Id="RemoveInstallFolder"
+              Directory="INSTALLFOLDER"
+              On="uninstall" />
+</Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <!-- Start menu shortcut -->
+  <Fragment>
+    <Component Id="StartMenuShortcuts" Directory="ProgramMenuDir" Guid="{D6E7F1B3-7B44-4F4D-9B92-6B4BB33A1B10}">
+      <Shortcut Id="StartMenuShortcut"
+                Name="LayoutFixer"
+                Target="[INSTALLFOLDER]LayoutFixer.exe"
+                WorkingDirectory="INSTALLFOLDER" />
+      <RemoveFolder Id="RemoveProgramMenuDir" Directory="ProgramMenuDir" On="uninstall" />
+      <RegistryValue Root="HKCU" Key="Software\LayoutFixer" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+  </Fragment>
+
+</Wix>

@@ -1,0 +1,18 @@
+# build outputs
+bin/
+obj/
+
+# user-specific
+*.user
+*.suo
+.vs/
+
+# installers output
+installer/**/bin/
+installer/**/obj/
+
+# settings
+*.log
+
+# publish output (optional – אם לא רוצים להעלות EXE)
+publish/

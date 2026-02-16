@@ -1,0 +1,14 @@
+<Project Sdk="WixToolset.Sdk/4.0.4">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputName>LayoutFixerSetup</OutputName>
+    <OutputType>Package</OutputType>
+
+    <!-- IMPORTANT: prevents WiX from compiling *.wxs automatically -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Package.wxs" />
+  </ItemGroup>
+</Project>
