@@ -8,5 +8,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-
+   <PropertyGroup>
+  <ApplicationIcon>Assets\LayoutFixer.ico</ApplicationIcon>
+</PropertyGroup>
 </Project>
