@@ -33,7 +33,7 @@ public partial class App : System.Windows.Application
         var convertNow = new Forms.ToolStripMenuItem("Convert now (Ctrl+C → convert → Ctrl+V)");
         convertNow.Click += (_, _) => TryConvertSelection(pasteBack: true);
         menu.Items.Add(convertNow);
-/* debug
+
         var convertClipboard = new Forms.ToolStripMenuItem("Convert CLIPBOARD text (no selection)");
         convertClipboard.Click += (_, _) =>
         {
@@ -66,6 +66,8 @@ public partial class App : System.Windows.Application
             }
         };
         menu.Items.Add(convertClipboard);
+         
+         /* debug
          var debug = new Forms.ToolStripMenuItem("DEBUG: show clipboard + conversion");
             debug.Click += (_, _) =>
             {
