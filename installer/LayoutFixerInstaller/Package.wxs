@@ -5,14 +5,16 @@
     Manufacturer="LayoutFixer"
     Version="1.0.0"
     UpgradeCode="{9A4F4B8E-9D2E-4B15-9A58-FA3C4D3E9B11}"
-    Icon="LayoutFixer.ico"
     Compressed="yes"
     Scope="perUser">
      
-    <Icon Id="LayoutFixerIcon" SourceFile="LayoutFixer.ico" />
+
 
     <MajorUpgrade DowngradeErrorMessage="A newer version of LayoutFixer is already installed." />
     <MediaTemplate />
+    <Icon Id="LayoutFixerIcon" SourceFile="Assets\LayoutFixer.ico" />
+
+    <Property Id="ARPPRODUCTICON" Value="LayoutFixerIcon" />
 
     <Feature Id="MainFeature" Title="LayoutFixer" Level="1">
       <ComponentGroupRef Id="AppComponents" />
