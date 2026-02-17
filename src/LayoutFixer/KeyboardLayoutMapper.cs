@@ -11,15 +11,41 @@ public sealed class KeyboardLayoutMapper
     {
         direction = $"{langA} -> {langB}";
 
-        if (string.IsNullOrEmpty(text)) return new ConvertResult(text, Changed: false);
+        if (string.IsNullOrEmpty(text))
+            return new ConvertResult(text, Changed: false);
 
-        // Normalize incoming text (kills weird presentation forms if already there)
+        StringBuilder lowerCaseString = new StringBuilder();
+
+        foreach (char c in text)
+        {
+            if (char.IsUpper(c))
+            {
+                // If it's uppercase, convert to lowercase and append
+                lowerCaseString.Append(char.ToLower(c));
+            }
+            else
+            {
+                // Otherwise, append the character as is
+                lowerCaseString.Append(c);
+            }
+        }            
+
+        text = lowerCaseString.ToString();
+        // Normalize incoming text (fixes Hebrew presentation forms etc.)
         text = text.Normalize(NormalizationForm.FormKC);
 
-        var mapA = BuildLayoutMaps(langA);
-        var mapB = BuildLayoutMaps(langB);
 
-        // Score which layout the text resembles more
+        
+
+        LayoutMaps mapA;
+        LayoutMaps mapB;
+
+        lock (_lock)
+        {
+            mapA = BuildLayoutMaps(langA);
+            mapB = BuildLayoutMaps(langB);
+        }
+
         int scoreA = Score(text, mapA.CharToKey);
         int scoreB = Score(text, mapB.CharToKey);
 
@@ -41,65 +67,110 @@ public sealed class KeyboardLayoutMapper
         }
     }
 
-    private ConvertResult Convert(string text,
+    private static ConvertResult Convert(
+        string text,
         Dictionary<string, KeyStroke> fromCharToKey,
         Dictionary<KeyStroke, string> toKeyToChar)
     {
         var sb = new StringBuilder(text.Length);
         bool changed = false;
 
-        foreach (var rune in text.EnumerateRunes())
+        foreach (var ch in text)
         {
-            var s = rune.ToString();
+            // Ignore control chars
+            if (char.IsControl(ch))
+            {
+                sb.Append(ch);
+                continue;
+            }
 
-            if (fromCharToKey.TryGetValue(s, out var ks))
+            // Try to resolve to a keystroke in the SOURCE layout
+            if (TryGetStroke(fromCharToKey, ch, out var ks))
             {
-                if (toKeyToChar.TryGetValue(ks, out var outChar) && !string.IsNullOrEmpty(outChar))
+                // Convert that keystroke to a character in the DEST layout
+                if (toKeyToChar.TryGetValue(ks, out var mapped) && !string.IsNullOrEmpty(mapped))
                 {
-                    sb.Append(outChar);
-                    if (outChar != s) changed = true;
-                }
-                else
-                {
-                    sb.Append(s);
+                    // Normalize output char (important for Hebrew/Arabic presentation forms)
+                    mapped = mapped.Normalize(NormalizationForm.FormKC);
+
+                    // Only mark changed if it really changed
+                    if (mapped.Length != 1 || mapped[0] != ch) changed = true;
+
+                    sb.Append(mapped);
+                    continue;
                 }
             }
-            else
-            {
-                sb.Append(s);
-            }
+
+            // If not mapped: keep original (special chars like @#! stay)
+            sb.Append(ch);
         }
 
-        // Final normalization (prevents Hebrew/Arabic odd forms)
         var final = sb.ToString().Normalize(NormalizationForm.FormKC);
-        return new ConvertResult(final, changed);
+        return new ConvertResult(final, Changed: changed);
     }
 
-    private int Score(string text, Dictionary<string, KeyStroke> charToKey)
+    private static int Score(string text, Dictionary<string, KeyStroke> charToKey)
     {
         int score = 0;
-        foreach (var rune in text.EnumerateRunes())
+
+        foreach (var ch in text)
         {
-            if (charToKey.ContainsKey(rune.ToString())) score++;
+            if (char.IsControl(ch)) continue;
+
+            // Exact hit
+            if (charToKey.ContainsKey(ch.ToString()))
+            {
+                score++;
+                continue;
+            }
+
+            // CapsLock support:
+            // If we see 'A'..'Z', treat it like 'a'..'z' for scoring too.
+            if (ch >= 'A' && ch <= 'Z')
+            {
+                var lower = ((char)(ch + 32)).ToString(); // fast ToLowerInvariant for ASCII
+                if (charToKey.ContainsKey(lower)) score++;
+            }
         }
+
         return score;
+    }
+
+    private static bool TryGetStroke(Dictionary<string, KeyStroke> map, char ch, out KeyStroke ks)
+    {
+        var s = ch.ToString();
+
+        // Exact match first
+        if (map.TryGetValue(s, out ks))
+            return true;
+
+        // CapsLock support:
+        // If input is Latin uppercase A-Z, prefer mapping as lowercase (no Shift).
+        // This makes "AKUO" behave like "akuo" and converts to Hebrew correctly.
+        if (ch >= 'A' && ch <= 'Z')
+        {
+            var lower = ((char)(ch + 32)).ToString();
+            
+            if (map.TryGetValue(lower, out ks))
+                return true;
+        }
+
+        ks = default;
+        return false;
     }
 
     private LayoutMaps BuildLayoutMaps(string cultureName)
     {
         var hkl = LayoutLookup.FindHKLByCulture(cultureName);
 
-        // Build mapping for a useful set of VKs (letters, digits, punctuation, space)
-        // We map both unshifted and shifted.
         var keyToChar = new Dictionary<KeyStroke, string>();
         var charToKey = new Dictionary<string, KeyStroke>();
 
         // Key state buffers
         var stateNoShift = new byte[256];
         var stateShift = new byte[256];
-        stateShift[0x10] = 0x80; // VK_SHIFT
+        stateShift[0x10] = 0x80; // VK_SHIFT down
 
-        // VKs to include:
         var vks = new List<uint>();
 
         // A-Z
@@ -112,10 +183,9 @@ public sealed class KeyboardLayoutMapper
         vks.Add(0x20);
 
         // Common OEM punctuation keys
-        // US: ;=,-./` and [\]'
         vks.AddRange(new uint[] { 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC0, 0xDB, 0xDC, 0xDD, 0xDE });
 
-        // Build (vk,shift) -> char and char -> (vk,shift)
+        // IMPORTANT: add unshifted first, then shifted (so lower-case wins first-come)
         foreach (var vk in vks)
         {
             AddStroke(vk, shift: false, stateNoShift);
@@ -138,7 +208,7 @@ public sealed class KeyboardLayoutMapper
             if (!keyToChar.ContainsKey(ks))
                 keyToChar[ks] = ch;
 
-            // first-come wins for char->key
+            // first-come wins for char->key (unshifted added first)
             if (!charToKey.ContainsKey(ch))
                 charToKey[ch] = ks;
         }
