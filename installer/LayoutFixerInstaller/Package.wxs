@@ -7,52 +7,57 @@
     UpgradeCode="{9A4F4B8E-9D2E-4B15-9A58-FA3C4D3E9B11}"
     Compressed="yes"
     Scope="perUser">
-     
-
 
     <MajorUpgrade DowngradeErrorMessage="A newer version of LayoutFixer is already installed." />
     <MediaTemplate />
-    <Icon Id="LayoutFixerIcon" SourceFile="Assets\LayoutFixer.ico" />
 
+    <!-- Icon used by Add/Remove Programs + shortcuts -->
+    <Icon Id="LayoutFixerIcon" SourceFile="Assets\LayoutFixer.ico" />
     <Property Id="ARPPRODUCTICON" Value="LayoutFixerIcon" />
 
     <Feature Id="MainFeature" Title="LayoutFixer" Level="1">
       <ComponentGroupRef Id="AppComponents" />
       <ComponentRef Id="StartMenuShortcuts" />
+      <ComponentRef Id="DesktopShortcut" />
+      <!-- <ComponentRef Id="RunOnLogin" /> -->
     </Feature>
 
   </Package>
 
-  <!-- Directories (per-user install + Start Menu) -->
+  <!-- Directories -->
   <Fragment>
+    <!-- Per-user install path -->
     <StandardDirectory Id="LocalAppDataFolder">
       <Directory Id="INSTALLFOLDER" Name="LayoutFixer" />
     </StandardDirectory>
 
+    <!-- Start Menu -->
     <StandardDirectory Id="ProgramMenuFolder">
       <Directory Id="ProgramMenuDir" Name="LayoutFixer" />
     </StandardDirectory>
+
+    <!-- Desktop -->
+    <StandardDirectory Id="DesktopFolder" />
   </Fragment>
 
   <!-- App files -->
   <Fragment>
     <ComponentGroup Id="AppComponents" Directory="INSTALLFOLDER">
+
 <Component Id="AppExe" Guid="{F2D6E44F-3B6F-4F0C-9B8B-07D7E5E6E5B9}">
   <File Id="LayoutFixerExe"
         Source="..\..\src\LayoutFixer\bin\Release\net8.0-windows\win-x64\publish\LayoutFixer.exe" />
 
-  <!-- REQUIRED for per-user installs -->
-  <RegistryValue
-      Root="HKCU"
-      Key="Software\LayoutFixer"
-      Name="Installed"
-      Type="integer"
-      Value="1"
-      KeyPath="yes" />
-      <RemoveFolder Id="RemoveInstallFolder"
-              Directory="INSTALLFOLDER"
-              On="uninstall" />
+  <RegistryValue Root="HKCU"
+                 Key="Software\LayoutFixer"
+                 Name="Installed"
+                 Type="integer"
+                 Value="1"
+                 KeyPath="yes" />
+
+  <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
 </Component>
+
     </ComponentGroup>
   </Fragment>
 
@@ -62,12 +67,50 @@
       <Shortcut Id="StartMenuShortcut"
                 Name="LayoutFixer"
                 Target="[INSTALLFOLDER]LayoutFixer.exe"
-                Icon="LayoutFixerIcon"
-                IconIndex="0"
-                WorkingDirectory="INSTALLFOLDER" />
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="LayoutFixerIcon" />
+
       <RemoveFolder Id="RemoveProgramMenuDir" Directory="ProgramMenuDir" On="uninstall" />
-      <RegistryValue Root="HKCU" Key="Software\LayoutFixer" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
+
+      <RegistryValue Root="HKCU"
+                     Key="Software\LayoutFixer"
+                     Name="StartMenuShortcut"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
     </Component>
   </Fragment>
+
+  <!-- Desktop shortcut -->
+  <Fragment>
+    <Component Id="DesktopShortcut" Directory="DesktopFolder" Guid="{3F0B2C69-3D3B-4A6A-8A5B-9C2F6F7F7A11}">
+      <Shortcut Id="DesktopShortcut1"
+                Name="LayoutFixer"
+                Target="[INSTALLFOLDER]LayoutFixer.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="LayoutFixerIcon" />
+
+      <RegistryValue Root="HKCU"
+                     Key="Software\LayoutFixer"
+                     Name="DesktopShortcut"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+  </Fragment>
+
+  <!-- Optional: Run on login (HKCU\Run) -->
+  <!--
+  <Fragment>
+    <Component Id="RunOnLogin" Directory="INSTALLFOLDER" Guid="{7B5A3F10-2F6C-4C91-9F13-0F1E19E1A555}">
+      <RegistryValue Root="HKCU"
+                     Key="Software\Microsoft\Windows\CurrentVersion\Run"
+                     Name="LayoutFixer"
+                     Value="&quot;[INSTALLFOLDER]LayoutFixer.exe&quot;"
+                     Type="string"
+                     KeyPath="yes" />
+    </Component>
+  </Fragment>
+  -->
 
 </Wix>

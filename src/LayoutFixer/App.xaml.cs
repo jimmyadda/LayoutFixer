@@ -2,6 +2,9 @@ using System.Windows;
 using ClipboardWpf= System.Windows.Clipboard;
 using System.Windows.Threading;
 using Forms = System.Windows.Forms;
+using System.Drawing;
+using System.Reflection;
+
 
 namespace LayoutFixer;
 
@@ -14,6 +17,25 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        var logPath = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "LayoutFixer",
+            "startup.log"
+        );
+        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(logPath)!);
+        System.IO.File.AppendAllText(logPath, $"START {DateTime.Now:O}{Environment.NewLine}");
+
+        AppDomain.CurrentDomain.UnhandledException += (_, ex) =>
+        {
+            System.IO.File.AppendAllText(logPath, $"UNHANDLED: {ex.ExceptionObject}{Environment.NewLine}");
+        };
+
+        DispatcherUnhandledException += (_, ex) =>
+        {
+            System.IO.File.AppendAllText(logPath, $"DISPATCHER: {ex.Exception}{Environment.NewLine}");
+            ex.Handled = true;
+        };
+
         base.OnStartup(e);
 
         _mapper = new KeyboardLayoutMapper();
@@ -22,11 +44,33 @@ public partial class App : System.Windows.Application
         var win = new MainWindow(_settings);
         win.Hide();
 
-        // Tray icon
-        _notify = new Forms.NotifyIcon();
-        _notify.Icon = System.Drawing.SystemIcons.Application;
-        _notify.Visible = true;
-        _notify.Text = "LayoutFixer";
+            // Tray icon
+            _notify = new Forms.NotifyIcon();
+            _notify.Visible = true;
+            _notify.Text = "LayoutFixer";
+
+            try
+            {
+                var uri = new Uri("pack://application:,,,/Assets/LayoutFixer.ico", UriKind.Absolute);
+                var streamInfo = System.Windows.Application.GetResourceStream(uri);
+                if (streamInfo?.Stream != null)
+                {
+                    using var icoStream = streamInfo.Stream;
+                            // 🔥 FORCE 32x32
+                        _notify.Icon = new System.Drawing.Icon(
+                            icoStream,
+                            new System.Drawing.Size(64, 64) );
+                }
+                else
+                {
+                    _notify.Icon = System.Drawing.SystemIcons.Application;
+                }
+            }
+            catch
+            {
+                _notify.Icon = System.Drawing.SystemIcons.Application;
+            }
+         System.IO.File.AppendAllText(logPath, "Tray created\n");
 
         var menu = new Forms.ContextMenuStrip();
 
@@ -138,7 +182,7 @@ public partial class App : System.Windows.Application
             try { _hotkey.UnregisterHotkey(); } catch { /* ignore */ }
             RegisterHotkeyOrBalloon();
         };
-
+         //System.Windows.MessageBox.Show("Started OK");
         ShowBalloon("LayoutFixer", $"Running. Select text and press {_settings.Hotkey}.");
     }
 

@@ -7,8 +7,11 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>Assets\LayoutFixer.ico</ApplicationIcon>
   </PropertyGroup>
-   <PropertyGroup>
-  <ApplicationIcon>Assets\LayoutFixer.ico</ApplicationIcon>
-</PropertyGroup>
+
+<ItemGroup>
+  <Resource Include="Assets\LayoutFixer.ico" />
+</ItemGroup>
+
 </Project>
